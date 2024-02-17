@@ -28,9 +28,11 @@ class Rede(object):
     #da rede, ao invés de passar por todos os dados de treinamento.
     def SGD(self, training_data, epochs, mini_batch_size, eta, test_data=None):
 
-
+        test_data = list(test_data)
+        training_data = list(training_data)
         if test_data: n_test = len(test_data)
         n = len(training_data)
+        
         
     #Para cada epoch, escolhemos o conjunto de mini-lotes,
     #e então ajustamos os parâmetros da rede em cada passagem por mini-lote.
@@ -62,13 +64,46 @@ class Rede(object):
         nabla_p = [np.zeros(p.shape) for p in self.pesos]
         nabla_v = [np.zeros(v.shape) for v in self.vies]
 
-        
 
+        #feedforward
+        activation = x
+
+        activations = [x]
+
+        zs = []
+
+        for v, p in zip(self.vies, self.pesos):
         
+            z = np.dot(p, activation) + v
+            zs.append(z)
+            activation = sigmoid(z)
+            activations.append(activation)
+        #backward pass
+        delta = self.cost_derivative(activations[-1], y) * sigmoid_prime(zs[-1])
+        nabla_v[-1] = delta
+        nabla_p[-1] = np.dot(delta, activations[-2].transpose())
+
+
+        for l in range(2, self.num_camadas):
+            z = zs[-l]
+            sp = sigmoid_prime(z)
+            delta = np.dot(self.pesos[-l + 1].transpose(), delta) * sp
+            nabla_v[-l] = delta
+            nabla_p[-l] = np.dot(delta, activations[-l-1].transpose())
+
+        return (nabla_v, nabla_p)
+    
+    def evaluate(self, test_data):
+
+        test_results = [(np.argmax(self.feedforward(x)), y) for (x, y) in test_data]
+        return sum(int(x == y) for (x, y) in test_results)
+    
+    def cost_derivative(self, output_activations, y):
+        return(output_activations - y)
+
+
 def sigmoid(x):
     return 1.0/(1.0 + np.exp(-x))
 
-
-net = Rede([1, 3, 3, 2])
-
-print(net.pesos)
+def sigmoid_prime(z):
+    return sigmoid(z) * (1 - sigmoid(z))
